@@ -21,6 +21,7 @@ import numpy as np
 import librosa
 
 from . import audio_io
+from . import isolate as isolatemod
 from . import warp as warpmod
 from .pitch import track_pitch, PitchTrack
 from .align import estimate_offset, Alignment
@@ -71,6 +72,8 @@ def run(
     out_dir: str = "output",
     backend: str = "both",           # 'world' | 'rubberband' | 'both'
     align_mode: str = "dtw",         # 'dtw' (drift-tolerant) | 'offset' (v1)
+    isolate_reference: bool = False, # Demucs-isolate the reference from a full mix
+    isolate_take: bool = False,      # Demucs-isolate the take (rarely needed)
     strength: float = 0.6,      # tuned by ear on the first real take
     preserve: float = 1.0,
     smooth_ms: float = 95.0,
@@ -86,6 +89,18 @@ def run(
     cache_dir = cache_dir or os.path.join(out_dir, ".cache")
     timings = {}
     pitch_params = dict(hop_seconds=hop_seconds, fmin=fmin, fmax=fmax, model=model)
+
+    # Phase 4: optionally pull the vocal out of a full mix first.
+    if isolate_reference:
+        t0 = time.time()
+        reference_path, hit = isolatemod.isolate_vocal(reference_path, cache_dir)
+        timings["isolate_reference"] = time.time() - t0
+        timings["isolate_reference_cache_hit"] = hit
+    if isolate_take:
+        t0 = time.time()
+        user_path, hit = isolatemod.isolate_vocal(user_path, cache_dir)
+        timings["isolate_take"] = time.time() - t0
+        timings["isolate_take_cache_hit"] = hit
 
     t0 = time.time()
     user_y, su = audio_io.load_audio(user_path)

@@ -21,6 +21,10 @@ def main(argv=None):
     p.add_argument("--backend", choices=["world", "rubberband", "both"], default="both")
     p.add_argument("--align-mode", choices=["dtw", "offset"], default="dtw",
                    help="dtw = frame-by-frame warp (drift-tolerant); offset = single global shift (v1)")
+    p.add_argument("--isolate-reference", action="store_true",
+                   help="reference is a full song: Demucs-isolate its vocal first")
+    p.add_argument("--isolate-take", action="store_true",
+                   help="take is a full mix: Demucs-isolate its vocal first (rarely needed)")
     p.add_argument("--strength", type=float, default=0.6,
                    help="note-center correction strength 0..1 (lower = more natural)")
     p.add_argument("--preserve", type=float, default=1.0,
@@ -41,6 +45,8 @@ def main(argv=None):
         out_dir=args.out,
         backend=args.backend,
         align_mode=args.align_mode,
+        isolate_reference=args.isolate_reference,
+        isolate_take=args.isolate_take,
         strength=args.strength,
         preserve=args.preserve,
         smooth_ms=args.smooth_ms,
@@ -51,6 +57,12 @@ def main(argv=None):
 
     a = res.alignment
     print("\n=== Melody-Reference Vocal Tuner ===")
+    if res.timings.get("isolate_reference") is not None:
+        tag = " [cached]" if res.timings.get("isolate_reference_cache_hit") else ""
+        print(f"isolated reference vocal via Demucs{tag}")
+    if res.timings.get("isolate_take") is not None:
+        tag = " [cached]" if res.timings.get("isolate_take_cache_hit") else ""
+        print(f"isolated take vocal via Demucs{tag}")
     print(f"align mode: {res.align_mode}")
     print(f"global offset: lag {a.lag_seconds*1000:+.0f} ms "
           f"(confidence {a.confidence:.2f}, residual drift {a.residual_drift_ms:.0f} ms)")

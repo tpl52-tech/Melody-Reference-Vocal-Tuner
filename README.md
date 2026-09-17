@@ -56,7 +56,17 @@ and/or raise `--smooth-ms`; WORLD sounds more natural than RubberBand (which
 does a flat shift per note). `--preserve 1.0` keeps all your natural pitch
 movement.
 
-Reference and take should be **vocal-only** in v1 (full-song stem separation via Demucs is a planned stretch). Phone recordings (`.m4a`) work — that's what `ffmpeg` is for.
+Phone recordings (`.m4a`) work — that's what `ffmpeg` is for.
+
+**Full-song reference (Phase 4):** if you only have the full mix, add
+`--isolate-reference` (CLI) or tick *"It's a full song — isolate the vocal"*
+(UI) and Demucs pulls the lead vocal out first. Separation is slow on CPU and
+the first run downloads a model (~80 MB), so the isolated vocal is cached. A
+real acapella still tracks a little cleaner than a separated one.
+
+```bash
+python -m vtuner.cli -r data/full_song.mp3 -u data/take.wav --isolate-reference
+```
 
 ## Demo UI
 
@@ -77,4 +87,4 @@ python scripts/selftest.py     # synthesizes a mangled take, runs the pipeline, 
 
 ## Status
 
-Phases 1–3 done. Phase 1 (core pipeline) validated on a real take — CREPE → align → segment → register-fold → note-quantized partial correction → dual-backend render. DTW alignment (originally a v2/stretch) was pulled forward because real sing-along takes drift; the default tuning knobs were dialed in by ear to a natural, non-robotic result. Phase 3 is the Flask demo UI above. Demucs full-song input (Phase 4 stretch) is next.
+Phases 1–4 done. Phase 1 (core pipeline) validated on a real take — CREPE → align → segment → register-fold → note-quantized partial correction → dual-backend render. DTW alignment (originally a v2/stretch) was pulled forward because real sing-along takes drift; the default tuning knobs were dialed in by ear to a natural, non-robotic result. Phase 3 is the Flask demo UI above. Phase 4 (stretch) adds optional Demucs vocal isolation so a full mixed song can be used as the reference.
