@@ -21,11 +21,11 @@ def main(argv=None):
     p.add_argument("--backend", choices=["world", "rubberband", "both"], default="both")
     p.add_argument("--align-mode", choices=["dtw", "offset"], default="dtw",
                    help="dtw = frame-by-frame warp (drift-tolerant); offset = single global shift (v1)")
-    p.add_argument("--strength", type=float, default=0.9,
-                   help="note-center correction strength 0..1")
+    p.add_argument("--strength", type=float, default=0.6,
+                   help="note-center correction strength 0..1 (lower = more natural)")
     p.add_argument("--preserve", type=float, default=1.0,
                    help="how much within-note micro-pitch/vibrato to keep 0..1")
-    p.add_argument("--smooth-ms", type=float, default=50.0,
+    p.add_argument("--smooth-ms", type=float, default=95.0,
                    help="glide time for corrections across note transitions (higher = less robotic)")
     p.add_argument("--model", choices=["full", "tiny"], default="full",
                    help="CREPE capacity: full=accurate, tiny=fast")
