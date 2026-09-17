@@ -8,3 +8,6 @@ torch>=2.0
 torchcrepe>=0.0.22
 pyworld>=0.3.4
 pyrubberband>=0.3.0
+
+# Demo UI (Phase 3)
+flask>=3.0
