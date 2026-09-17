@@ -58,6 +58,17 @@ movement.
 
 Reference and take should be **vocal-only** in v1 (full-song stem separation via Demucs is a planned stretch). Phone recordings (`.m4a`) work — that's what `ffmpeg` is for.
 
+## Demo UI
+
+```bash
+python -m vtuner.webapp     # then open http://127.0.0.1:7860
+```
+
+Upload a reference vocal and your take — **or record your take in the browser**
+— adjust the settings if you like, and hear **before / after** side by side.
+"Load NSYNC example & tune" runs the bundled, pre-cached example instantly.
+(Local Flask app; no data leaves your machine.)
+
 ## Verify without real audio
 
 ```bash
@@ -66,4 +77,4 @@ python scripts/selftest.py     # synthesizes a mangled take, runs the pipeline, 
 
 ## Status
 
-Phase 1 (core pipeline) **done and validated on a real take** — CREPE → align → segment → register-fold → note-quantized partial correction → dual-backend render. DTW alignment (originally a v2/stretch) was pulled forward because real sing-along takes drift; the default tuning knobs were dialed in by ear to a natural, non-robotic result. A demo UI (Phase 3) and Demucs full-song input (Phase 4 stretch) are next.
+Phases 1–3 done. Phase 1 (core pipeline) validated on a real take — CREPE → align → segment → register-fold → note-quantized partial correction → dual-backend render. DTW alignment (originally a v2/stretch) was pulled forward because real sing-along takes drift; the default tuning knobs were dialed in by ear to a natural, non-robotic result. Phase 3 is the Flask demo UI above. Demucs full-song input (Phase 4 stretch) is next.
