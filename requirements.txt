@@ -1,0 +1,10 @@
+# Core pipeline (Phase 1). Python 3.9+.
+# System deps (install first): ffmpeg, rubberband  (macOS: `brew install ffmpeg rubberband`)
+numpy>=1.23
+scipy>=1.9
+soundfile>=0.12
+librosa>=0.10
+torch>=2.0
+torchcrepe>=0.0.22
+pyworld>=0.3.4
+pyrubberband>=0.3.0
