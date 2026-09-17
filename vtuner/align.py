@@ -68,7 +68,7 @@ def _residual_drift(eu, er, lag_frames, fps, block_s=0.5):
     n = min(len(a), len(b))
     a, b = a[:n], b[:n]
     block = max(1, int(round(block_s * fps)))
-    search = max(1, int(round(0.08 * fps)))  # +/- 80 ms local search
+    search = max(1, int(round(0.6 * fps)))  # +/- 600 ms local search (wide enough to see real drift)
     local = []
     for s in range(0, n - block, block):
         aw, bw = a[s:s + block], b[s:s + block]
