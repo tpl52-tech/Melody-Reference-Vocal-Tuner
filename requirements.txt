@@ -11,3 +11,6 @@ pyrubberband>=0.3.0
 
 # Demo UI (Phase 3)
 flask>=3.0
+
+# Full-song input (Phase 4 stretch): Demucs vocal isolation
+demucs>=4.0

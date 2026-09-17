@@ -71,7 +71,10 @@ def tune():
             align_mode=request.form.get("align_mode", "dtw"),
             model=request.form.get("model", "full"),
             strength=f("strength", 0.6), preserve=f("preserve", 1.0),
-            smooth_ms=f("smooth_ms", 95.0), measure_output=False,
+            smooth_ms=f("smooth_ms", 95.0),
+            isolate_reference=request.form.get("isolate_reference") == "1",
+            isolate_take=request.form.get("isolate_take") == "1",
+            measure_output=False,
         )
     except Exception as exc:
         return jsonify(error=str(exc)), 500
@@ -147,6 +150,9 @@ INDEX_HTML = r"""<!doctype html>
     <div class="col">
       <label class="blk">1 · Reference vocal <span class="muted">(isolated)</span></label>
       <input type="file" id="reference" accept="audio/*">
+      <label style="display:block;margin-top:8px;font-size:13px;color:#c7ccd6">
+        <input type="checkbox" id="isoRef"> It's a full song — isolate the vocal
+        <span class="muted">(Demucs; slower, first run downloads a model)</span></label>
     </div>
     <div class="col">
       <label class="blk">2 · Your take</label>
@@ -246,15 +252,19 @@ async function runTune(useExample){
   fd.append('strength', $('#strength').value);
   fd.append('preserve', $('#preserve').value);
   fd.append('smooth_ms', $('#smooth_ms').value);
+  let isolating = false;
   if (useExample) { fd.append('example','1'); }
   else {
     const ref = $('#reference').files[0];
     const take = $('#take').files[0] || (recBlob ? new File([recBlob],'recording.webm') : null);
     if (!ref || !take) { setStatus('⚠️ Provide a reference vocal and your take (upload or record).'); return; }
     fd.append('reference', ref); fd.append('take', take);
+    if ($('#isoRef').checked) { fd.append('isolate_reference','1'); isolating = true; }
   }
   const slow = seg.model==='full' && !useExample;
-  setStatus('<span class="spin"></span>Tuning…' + (slow ? ' (full model on a fresh clip can take 1–2 min on CPU)' : ''));
+  setStatus('<span class="spin"></span>Tuning…'
+    + (isolating ? ' (isolating the vocal with Demucs — first run downloads a model, can take a few min)'
+                 : (slow ? ' (full model on a fresh clip can take 1–2 min on CPU)' : '')));
   $('#tuneBtn').disabled = $('#exBtn').disabled = true;
   try {
     const r = await fetch('/tune', {method:'POST', body:fd});
