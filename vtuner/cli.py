@@ -25,6 +25,8 @@ def main(argv=None):
                    help="note-center correction strength 0..1")
     p.add_argument("--preserve", type=float, default=1.0,
                    help="how much within-note micro-pitch/vibrato to keep 0..1")
+    p.add_argument("--smooth-ms", type=float, default=50.0,
+                   help="glide time for corrections across note transitions (higher = less robotic)")
     p.add_argument("--model", choices=["full", "tiny"], default="full",
                    help="CREPE capacity: full=accurate, tiny=fast")
     p.add_argument("--max-shift", type=float, default=12.0,
@@ -41,6 +43,7 @@ def main(argv=None):
         align_mode=args.align_mode,
         strength=args.strength,
         preserve=args.preserve,
+        smooth_ms=args.smooth_ms,
         model=args.model,
         max_shift_semitones=args.max_shift,
         measure_output=args.measure,

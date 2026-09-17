@@ -3,15 +3,27 @@
 Design choice (locked in v1): note-quantized + partial correction. For each
 reference note we pull the *centre* of the user's pitch toward the target
 centre by `strength`, while keeping the user's own within-note micro-pitch
-(vibrato, expression) scaled by `preserve`. This lands the note clearly in
-tune without the robotic feel of stamping the reference's raw contour on."""
+(vibrato, expression) scaled by `preserve`.
+
+To avoid the robotic auto-tune sound we (a) work on the *correction amount*
+(how many semitones we push each frame) rather than snapping to a flat target,
+and (b) smooth that amount over `smooth_ms` so it glides across note
+transitions the way a real voice does instead of stepping instantly.
+
+Knobs:
+  strength  0..1  how hard note centres are pulled to target (1 = dead in tune,
+                  lower = more of the singer's own tuning kept = less robotic)
+  preserve  0..1  how much within-note wobble/vibrato is kept (1 = all of it)
+  smooth_ms       glide time for corrections across boundaries (0 = hard steps)
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 import numpy as np
+from scipy.ndimage import gaussian_filter1d
 
-from .util import hz_to_midi, midi_to_hz, nan_median_filter
+from .util import hz_to_midi, midi_to_hz
 from .notes import Note
 
 
@@ -29,9 +41,11 @@ def compute_correction(
     strength: float = 0.9,
     preserve: float = 1.0,
     max_shift_semitones: float = 12.0,
-    ratio_smooth_win: int = 5,
+    smooth_ms: float = 50.0,
+    hop_seconds: float = 0.01,
 ) -> Correction:
     user_midi = hz_to_midi(user_f0)
+    user_voiced = np.isfinite(user_f0) & (user_f0 > 0)
     n = len(user_f0)
     corrected_midi = np.full(n, np.nan)
     segments = []
@@ -59,14 +73,18 @@ def compute_correction(
             "n_steps": float(np.clip(n_steps, -max_shift_semitones, max_shift_semitones)),
         })
 
-    # ratio = corrected / user, clipped to +/- max_shift and smoothed; frames
-    # with no correction (or unvoiced user) pass through untouched.
-    diff = corrected_midi - user_midi
-    diff = np.clip(diff, -max_shift_semitones, max_shift_semitones)
-    ratio = np.power(2.0, diff / 12.0)
-    ratio[~np.isfinite(ratio)] = 1.0
-    ratio = nan_median_filter(ratio, ratio_smooth_win)
-    ratio[~np.isfinite(ratio)] = 1.0
+    # Work on the correction amount (semitones pushed), so smoothing glides the
+    # push across boundaries while leaving the singer's own contour underneath.
+    delta = corrected_midi - user_midi
+    delta = np.where(np.isfinite(delta), delta, 0.0)
+    delta = np.clip(delta, -max_shift_semitones, max_shift_semitones)
+    sigma = (smooth_ms / 1000.0) / hop_seconds
+    if sigma > 0.3:
+        delta = gaussian_filter1d(delta, sigma, mode="nearest")
 
-    corrected_f0 = midi_to_hz(corrected_midi)
+    ratio = np.power(2.0, delta / 12.0)
+    ratio[~user_voiced] = 1.0
+
+    corrected_midi_final = np.where(user_voiced, user_midi + delta, np.nan)
+    corrected_f0 = midi_to_hz(corrected_midi_final)
     return Correction(corrected_f0=corrected_f0, ratio=ratio, segments=segments)

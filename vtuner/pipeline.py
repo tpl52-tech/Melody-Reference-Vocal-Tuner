@@ -43,7 +43,10 @@ class Result:
     timings: dict = field(default_factory=dict)
 
 
-def _cache_reference(path, y, sr, params, cache_dir):
+def _cache_pitch(path, y, sr, params, cache_dir, prefix="ref"):
+    """Track pitch, caching to disk keyed on file mtime + params. The audio
+    (reference or take) never changes between runs, so re-renders with new
+    tuning knobs skip the slow CREPE pass entirely."""
     os.makedirs(cache_dir, exist_ok=True)
     try:
         mtime = os.path.getmtime(path)
@@ -51,7 +54,7 @@ def _cache_reference(path, y, sr, params, cache_dir):
         mtime = 0.0
     key = f"{os.path.abspath(path)}|{mtime}|{sorted(params.items())}"
     h = hashlib.sha1(key.encode()).hexdigest()[:16]
-    fn = os.path.join(cache_dir, f"ref_{h}.npz")
+    fn = os.path.join(cache_dir, f"{prefix}_{h}.npz")
     if os.path.exists(fn):
         d = np.load(fn)
         return PitchTrack(d["f0"], d["voiced"], d["periodicity"], d["times"],
@@ -70,6 +73,7 @@ def run(
     align_mode: str = "dtw",         # 'dtw' (drift-tolerant) | 'offset' (v1)
     strength: float = 0.9,
     preserve: float = 1.0,
+    smooth_ms: float = 50.0,
     model: str = "full",
     hop_seconds: float = 0.01,
     fmin: float = 65.0,
@@ -96,7 +100,7 @@ def run(
 
     # Reference pitch (cached) + reference notes on the reference grid.
     t0 = time.time()
-    ref_pt, cached = _cache_reference(reference_path, ref_y, sr_r, pitch_params, cache_dir)
+    ref_pt, cached = _cache_pitch(reference_path, ref_y, sr_r, pitch_params, cache_dir, "ref")
     timings["pitch_reference"] = time.time() - t0
     timings["reference_cache_hit"] = cached
     ref_notes_full = segment_notes(ref_pt.f0, hop_seconds)
@@ -104,8 +108,9 @@ def run(
     if align_mode == "dtw":
         shift_src = user_y  # keep the take's own timing; DTW only maps targets
         t0 = time.time()
-        user_pt = track_pitch(shift_src, su, **pitch_params)
+        user_pt, user_cached = _cache_pitch(user_path, shift_src, su, pitch_params, cache_dir, "user")
         timings["pitch_user"] = time.time() - t0
+        timings["user_cache_hit"] = user_cached
 
         t0 = time.time()
         warp = warpmod.align(shift_src, ref_for_env, su, hop_seconds=hop_seconds)
@@ -132,7 +137,8 @@ def run(
 
     corr = compute_correction(
         user_f0, notes, reg, strength=strength, preserve=preserve,
-        max_shift_semitones=max_shift_semitones,
+        max_shift_semitones=max_shift_semitones, smooth_ms=smooth_ms,
+        hop_seconds=hop_seconds,
     )
 
     # Render.
