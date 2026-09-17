@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Pipeline artifacts
+output/
+data/*.wav
+data/*.mp3
+data/*.m4a
+!data/.gitkeep
+
+# OS
+.DS_Store
