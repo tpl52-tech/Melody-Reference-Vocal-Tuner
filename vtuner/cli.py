@@ -19,6 +19,8 @@ def main(argv=None):
     p.add_argument("--user", "-u", required=True, help="your sung take")
     p.add_argument("--out", "-o", default="output", help="output directory")
     p.add_argument("--backend", choices=["world", "rubberband", "both"], default="both")
+    p.add_argument("--align-mode", choices=["dtw", "offset"], default="dtw",
+                   help="dtw = frame-by-frame warp (drift-tolerant); offset = single global shift (v1)")
     p.add_argument("--strength", type=float, default=0.9,
                    help="note-center correction strength 0..1")
     p.add_argument("--preserve", type=float, default=1.0,
@@ -36,6 +38,7 @@ def main(argv=None):
         user_path=args.user,
         out_dir=args.out,
         backend=args.backend,
+        align_mode=args.align_mode,
         strength=args.strength,
         preserve=args.preserve,
         model=args.model,
@@ -45,11 +48,14 @@ def main(argv=None):
 
     a = res.alignment
     print("\n=== Melody-Reference Vocal Tuner ===")
-    print(f"alignment: lag {a.lag_seconds*1000:+.0f} ms "
+    print(f"align mode: {res.align_mode}")
+    print(f"global offset: lag {a.lag_seconds*1000:+.0f} ms "
           f"(confidence {a.confidence:.2f}, residual drift {a.residual_drift_ms:.0f} ms)")
-    if a.residual_drift_ms > 60:
-        print("  ! high residual drift -- offset-only sync may be insufficient "
-              "(consider per-note alignment)")
+    if res.align_mode == "dtw":
+        print(f"DTW matched: {res.warp_matched_fraction*100:.0f}% of take frames")
+    elif a.residual_drift_ms > 60:
+        print("  ! high residual drift -- offset-only sync insufficient; "
+              "use --align-mode dtw")
     print(f"reference notes: {res.n_notes}   register fold: {res.register_offset:+d} st")
     m = res.metrics
     print(f"pitch error to reference melody:")

@@ -1,13 +1,15 @@
 """End-to-end melody-reference retune pipeline.
 
-    reference vocal  --CREPE-->  pitch  --segment-->  note targets
-    user take        --align--> --CREPE--> pitch
-                          |                    |
-                          +---> register-fold + note-quantized partial
-                                correction ---> WORLD & RubberBand renders
+    reference vocal ─CREPE─▶ pitch ─segment─▶ note targets ─┐
+                                                            ├─▶ register-fold + note-quantized
+    your take ─align─▶ ─CREPE─▶ pitch ──────────────────────┘   partial correction
+                          │                                             │
+                          │                              WORLD ◀────────┴────────▶ RubberBand
+                          └─ align = 'offset' (global shift, v1) or 'dtw' (frame-by-frame
+                             warp for independently-recorded/drifting takes)
 
 The reference pitch track is cached on disk (it never changes between runs),
-which is what keeps a 30 s clip under the latency budget on CPU."""
+which keeps a 30 s clip under the latency budget on CPU."""
 from __future__ import annotations
 
 import hashlib
@@ -19,6 +21,7 @@ import numpy as np
 import librosa
 
 from . import audio_io
+from . import warp as warpmod
 from .pitch import track_pitch, PitchTrack
 from .align import estimate_offset, Alignment
 from .notes import segment_notes, target_midi_per_frame
@@ -31,8 +34,10 @@ from .util import hz_to_midi, midi_to_hz, cents_error
 @dataclass
 class Result:
     alignment: Alignment
+    align_mode: str
     register_offset: int
     n_notes: int
+    warp_matched_fraction: float = float("nan")
     metrics: dict = field(default_factory=dict)
     outputs: dict = field(default_factory=dict)
     timings: dict = field(default_factory=dict)
@@ -62,6 +67,7 @@ def run(
     user_path: str,
     out_dir: str = "output",
     backend: str = "both",           # 'world' | 'rubberband' | 'both'
+    align_mode: str = "dtw",         # 'dtw' (drift-tolerant) | 'offset' (v1)
     strength: float = 0.9,
     preserve: float = 1.0,
     model: str = "full",
@@ -69,7 +75,7 @@ def run(
     fmin: float = 65.0,
     fmax: float = 1000.0,
     max_shift_semitones: float = 12.0,
-    measure_output: bool = False,    # re-track renders to verify empirically
+    measure_output: bool = False,
     cache_dir: str | None = None,
 ) -> Result:
     os.makedirs(out_dir, exist_ok=True)
@@ -83,47 +89,62 @@ def run(
     ref_for_env = librosa.resample(ref_y, orig_sr=sr_r, target_sr=su) if sr_r != su else ref_y
     timings["load"] = time.time() - t0
 
-    # 1. Global sing-along offset, then put the take on the reference timeline.
+    # Global offset is always estimated for reporting (and used in offset mode).
     t0 = time.time()
     align = estimate_offset(user_y, ref_for_env, su)
-    user_aligned = audio_io.shift_audio(user_y, su, -align.lag_seconds)
     timings["align"] = time.time() - t0
 
-    # 2. Pitch tracking (reference cached).
+    # Reference pitch (cached) + reference notes on the reference grid.
     t0 = time.time()
     ref_pt, cached = _cache_reference(reference_path, ref_y, sr_r, pitch_params, cache_dir)
     timings["pitch_reference"] = time.time() - t0
     timings["reference_cache_hit"] = cached
+    ref_notes_full = segment_notes(ref_pt.f0, hop_seconds)
 
-    t0 = time.time()
-    user_pt = track_pitch(user_aligned, su, **pitch_params)
-    timings["pitch_user"] = time.time() - t0
+    if align_mode == "dtw":
+        shift_src = user_y  # keep the take's own timing; DTW only maps targets
+        t0 = time.time()
+        user_pt = track_pitch(shift_src, su, **pitch_params)
+        timings["pitch_user"] = time.time() - t0
 
-    n = min(len(user_pt.f0), len(ref_pt.f0))
-    user_f0 = user_pt.f0[:n]
-    ref_f0 = ref_pt.f0[:n]
+        t0 = time.time()
+        warp = warpmod.align(shift_src, ref_for_env, su, hop_seconds=hop_seconds)
+        take_notes, target_midi = warpmod.build_take_notes(
+            warp, ref_notes_full, len(ref_pt.f0), len(user_pt.f0),
+            hop_seconds=hop_seconds,
+        )
+        timings["warp"] = time.time() - t0
+        warp_matched = warp.matched_fraction
+        user_f0 = user_pt.f0
+        notes = take_notes
+    else:  # offset (v1): shift the take onto the reference timeline
+        shift_src = audio_io.shift_audio(user_y, su, -align.lag_seconds)
+        t0 = time.time()
+        user_pt = track_pitch(shift_src, su, **pitch_params)
+        timings["pitch_user"] = time.time() - t0
+        n = min(len(user_pt.f0), len(ref_pt.f0))
+        user_f0 = user_pt.f0[:n]
+        notes = [nt for nt in ref_notes_full if nt.start < n]
+        target_midi = target_midi_per_frame(notes, len(user_f0))
+        warp_matched = float("nan")
 
-    # 3. Reference notes + register fold.
-    notes = segment_notes(ref_f0, hop_seconds)
-    tgt_midi = target_midi_per_frame(notes, n)
-    reg = register_offset_semitones(hz_to_midi(user_f0), tgt_midi)
+    reg = register_offset_semitones(hz_to_midi(user_f0), target_midi)
 
-    # 4. Note-quantized partial correction.
     corr = compute_correction(
         user_f0, notes, reg, strength=strength, preserve=preserve,
         max_shift_semitones=max_shift_semitones,
     )
 
-    # 5. Render.
+    # Render.
     stem = os.path.splitext(os.path.basename(user_path))[0]
     outputs = {}
     raw_path = os.path.join(out_dir, f"{stem}_raw.wav")
-    audio_io.save_audio(raw_path, user_aligned, su)
+    audio_io.save_audio(raw_path, shift_src, su)
     outputs["raw"] = raw_path
 
     if backend in ("world", "both"):
         t0 = time.time()
-        w = world_shift(user_aligned, su, corr.corrected_f0, hop_seconds)
+        w = world_shift(shift_src, su, corr.corrected_f0, hop_seconds)
         timings["render_world"] = time.time() - t0
         wp = os.path.join(out_dir, f"{stem}_world.wav")
         audio_io.save_audio(wp, w, su)
@@ -131,16 +152,16 @@ def run(
     if backend in ("rubberband", "both"):
         try:
             t0 = time.time()
-            rb = rubberband_shift(user_aligned, su, corr.segments, hop_seconds)
+            rb = rubberband_shift(shift_src, su, corr.segments, hop_seconds)
             timings["render_rubberband"] = time.time() - t0
             rp = os.path.join(out_dir, f"{stem}_rubberband.wav")
             audio_io.save_audio(rp, rb, su)
             outputs["rubberband"] = rp
-        except Exception as exc:  # rubberband binary missing, etc.
+        except Exception as exc:
             outputs["rubberband_error"] = str(exc)
 
-    # 6. Metrics: pitch error to the (register-matched) reference target.
-    target_f0 = midi_to_hz(tgt_midi + reg)
+    # Metrics: pitch error to the (register-matched) reference target.
+    target_f0 = midi_to_hz(target_midi + reg)
     before = cents_error(user_f0, target_f0)
     predicted = cents_error(corr.corrected_f0, target_f0)
     metrics = {
@@ -157,7 +178,8 @@ def run(
         )
 
     return Result(
-        alignment=align, register_offset=reg, n_notes=len(notes),
+        alignment=align, align_mode=align_mode, register_offset=reg,
+        n_notes=len(notes), warp_matched_fraction=warp_matched,
         metrics=metrics, outputs=outputs, timings=timings,
     )
 
