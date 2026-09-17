@@ -19,9 +19,12 @@ def main():
     print(f"  transposed {truth['user_transpose']} st, delayed "
           f"{truth['delay_seconds']*1000:.0f} ms\n")
 
+    # minimal smoothing here: this test measures correction ACCURACY, and the
+    # synthetic clip's 0.5s notes are short relative to the musical glide default
     res = pipeline.run(
         ref_path, user_path, out_dir="output",
-        backend="both", strength=0.95, preserve=1.0, measure_output=True,
+        backend="both", strength=0.95, preserve=1.0, smooth_ms=20,
+        measure_output=True,
     )
 
     a = res.alignment

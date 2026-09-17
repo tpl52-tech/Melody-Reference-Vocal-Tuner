@@ -71,9 +71,9 @@ def run(
     out_dir: str = "output",
     backend: str = "both",           # 'world' | 'rubberband' | 'both'
     align_mode: str = "dtw",         # 'dtw' (drift-tolerant) | 'offset' (v1)
-    strength: float = 0.9,
+    strength: float = 0.6,      # tuned by ear on the first real take
     preserve: float = 1.0,
-    smooth_ms: float = 50.0,
+    smooth_ms: float = 95.0,
     model: str = "full",
     hop_seconds: float = 0.01,
     fmin: float = 65.0,
