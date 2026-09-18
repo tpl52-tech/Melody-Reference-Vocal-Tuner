@@ -27,6 +27,9 @@ def main(argv=None):
                    help="take is a full mix: Demucs-isolate its vocal first (rarely needed)")
     p.add_argument("--transpose", type=int, default=0, metavar="SEMITONES",
                    help="shift the output key up/down by N semitones (e.g. -3, +2)")
+    p.add_argument("--mix", action="store_true",
+                   help="produce a cover: warp the tuned vocal onto the song's real "
+                        "instrumental (needs a full-song reference; implies --isolate-reference)")
     p.add_argument("--strength", type=float, default=0.6,
                    help="note-center correction strength 0..1 (lower = more natural)")
     p.add_argument("--preserve", type=float, default=1.0,
@@ -50,6 +53,7 @@ def main(argv=None):
         isolate_reference=args.isolate_reference,
         isolate_take=args.isolate_take,
         transpose=args.transpose,
+        mix=args.mix,
         strength=args.strength,
         preserve=args.preserve,
         smooth_ms=args.smooth_ms,
