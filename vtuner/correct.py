@@ -40,6 +40,7 @@ def compute_correction(
     register_offset: float,
     strength: float = 0.9,
     preserve: float = 1.0,
+    transpose_semitones: float = 0.0,
     max_shift_semitones: float = 12.0,
     smooth_ms: float = 50.0,
     hop_seconds: float = 0.01,
@@ -48,6 +49,7 @@ def compute_correction(
     user_voiced = np.isfinite(user_f0) & (user_f0 > 0)
     n = len(user_f0)
     corrected_midi = np.full(n, np.nan)
+    covered = np.zeros(n, dtype=bool)
     segments = []
 
     for nt in notes:
@@ -60,10 +62,13 @@ def compute_correction(
             continue
         user_center = float(np.median(seg[finite]))
         target_center = nt.midi_center + register_offset
-        corrected_center = user_center + strength * (target_center - user_center)
+        # note correction is partial (strength); the key shift is applied in full
+        corrected_center = (user_center + strength * (target_center - user_center)
+                            + transpose_semitones)
 
         residual = seg - user_center            # NaN preserved where unvoiced
         corrected_midi[lo:hi] = corrected_center + preserve * residual
+        covered[lo:hi] = True
 
         n_steps = corrected_center - user_center  # constant shift for this note
         segments.append({
@@ -77,6 +82,10 @@ def compute_correction(
     # push across boundaries while leaving the singer's own contour underneath.
     delta = corrected_midi - user_midi
     delta = np.where(np.isfinite(delta), delta, 0.0)
+    # a key shift moves the whole vocal: transpose voiced frames that fall
+    # outside any reference note too (they get the shift but no note pull)
+    if transpose_semitones:
+        delta[user_voiced & ~covered] = transpose_semitones
     delta = np.clip(delta, -max_shift_semitones, max_shift_semitones)
     sigma = (smooth_ms / 1000.0) / hop_seconds
     if sigma > 0.3:

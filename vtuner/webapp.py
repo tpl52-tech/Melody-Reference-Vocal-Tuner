@@ -71,7 +71,7 @@ def tune():
             align_mode=request.form.get("align_mode", "dtw"),
             model=request.form.get("model", "full"),
             strength=f("strength", 0.6), preserve=f("preserve", 1.0),
-            smooth_ms=f("smooth_ms", 95.0),
+            smooth_ms=f("smooth_ms", 95.0), transpose=int(f("transpose", 0)),
             isolate_reference=request.form.get("isolate_reference") == "1",
             isolate_take=request.form.get("isolate_take") == "1",
             measure_output=False,
@@ -185,6 +185,8 @@ INDEX_HTML = r"""<!doctype html>
       <input type="range" id="preserve" min="0" max="1" step="0.05" value="1.0"></div>
     <div class="item"><label class="blk">Glide across notes: <span id="mV">95</span> ms <small>(higher = less robotic)</small></label>
       <input type="range" id="smooth_ms" min="0" max="200" step="5" value="95"></div>
+    <div class="item"><label class="blk">Transpose (key shift): <span id="tV">0</span> semitones <small>(shift the whole melody up/down)</small></label>
+      <input type="range" id="transpose" min="-12" max="12" step="1" value="0"></div>
   </details>
   </div>
 
@@ -214,9 +216,11 @@ document.querySelectorAll('.seg').forEach(g => {
     b.classList.add('sel'); seg[name] = b.dataset.v;
   });
 });
-for (const [id,out] of [['strength','sV'],['preserve','pV'],['smooth_ms','mV']]) {
+for (const [id,out] of [['strength','sV'],['preserve','pV'],['smooth_ms','mV'],['transpose','tV']]) {
   const el=$('#'+id), o=$('#'+out);
-  const fmt = id==='smooth_ms' ? v=>v : v=>Number(v).toFixed(2);
+  const fmt = id==='smooth_ms' ? (v=>v)
+            : id==='transpose' ? (v=> (v>0?'+':'')+v)
+            : (v=>Number(v).toFixed(2));
   el.oninput = () => o.textContent = fmt(el.value);
 }
 
@@ -252,6 +256,7 @@ async function runTune(useExample){
   fd.append('strength', $('#strength').value);
   fd.append('preserve', $('#preserve').value);
   fd.append('smooth_ms', $('#smooth_ms').value);
+  fd.append('transpose', $('#transpose').value);
   let isolating = false;
   if (useExample) { fd.append('example','1'); }
   else {

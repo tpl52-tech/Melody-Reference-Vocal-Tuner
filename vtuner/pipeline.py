@@ -37,6 +37,7 @@ class Result:
     alignment: Alignment
     align_mode: str
     register_offset: int
+    transpose: int
     n_notes: int
     warp_matched_fraction: float = float("nan")
     metrics: dict = field(default_factory=dict)
@@ -74,6 +75,7 @@ def run(
     align_mode: str = "dtw",         # 'dtw' (drift-tolerant) | 'offset' (v1)
     isolate_reference: bool = False, # Demucs-isolate the reference from a full mix
     isolate_take: bool = False,      # Demucs-isolate the take (rarely needed)
+    transpose: int = 0,              # key shift in semitones (on top of octave-match)
     strength: float = 0.6,      # tuned by ear on the first real take
     preserve: float = 1.0,
     smooth_ms: float = 95.0,
@@ -149,9 +151,11 @@ def run(
         warp_matched = float("nan")
 
     reg = register_offset_semitones(hz_to_midi(user_f0), target_midi)
+    total_offset = reg + int(transpose)  # octave-match + user-chosen key shift
 
     corr = compute_correction(
         user_f0, notes, reg, strength=strength, preserve=preserve,
+        transpose_semitones=int(transpose),
         max_shift_semitones=max_shift_semitones, smooth_ms=smooth_ms,
         hop_seconds=hop_seconds,
     )
@@ -181,8 +185,8 @@ def run(
         except Exception as exc:
             outputs["rubberband_error"] = str(exc)
 
-    # Metrics: pitch error to the (register-matched) reference target.
-    target_f0 = midi_to_hz(target_midi + reg)
+    # Metrics: pitch error to the (register-matched, transposed) reference target.
+    target_f0 = midi_to_hz(target_midi + total_offset)
     before = cents_error(user_f0, target_f0)
     predicted = cents_error(corr.corrected_f0, target_f0)
     metrics = {
@@ -200,7 +204,8 @@ def run(
 
     return Result(
         alignment=align, align_mode=align_mode, register_offset=reg,
-        n_notes=len(notes), warp_matched_fraction=warp_matched,
+        transpose=int(transpose), n_notes=len(notes),
+        warp_matched_fraction=warp_matched,
         metrics=metrics, outputs=outputs, timings=timings,
     )
 
