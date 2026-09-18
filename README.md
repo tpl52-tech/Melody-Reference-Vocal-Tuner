@@ -42,6 +42,7 @@ python -m vtuner.cli --reference data/ref.wav --user data/take.wav --out output
 #   --strength 0.6                     note-center correction (0..1; lower = more natural)
 #   --preserve 1.0                     how much of your vibrato/micro-pitch to keep
 #   --smooth-ms 95                     glide corrections across notes (higher = less robotic)
+#   --transpose 0                      shift the output key up/down by N semitones (e.g. -3, +2)
 #   --model full|tiny                  CREPE accuracy vs speed
 #   --measure                          re-track the render to verify tuning
 ```

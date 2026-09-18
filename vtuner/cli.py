@@ -25,6 +25,8 @@ def main(argv=None):
                    help="reference is a full song: Demucs-isolate its vocal first")
     p.add_argument("--isolate-take", action="store_true",
                    help="take is a full mix: Demucs-isolate its vocal first (rarely needed)")
+    p.add_argument("--transpose", type=int, default=0, metavar="SEMITONES",
+                   help="shift the output key up/down by N semitones (e.g. -3, +2)")
     p.add_argument("--strength", type=float, default=0.6,
                    help="note-center correction strength 0..1 (lower = more natural)")
     p.add_argument("--preserve", type=float, default=1.0,
@@ -47,6 +49,7 @@ def main(argv=None):
         align_mode=args.align_mode,
         isolate_reference=args.isolate_reference,
         isolate_take=args.isolate_take,
+        transpose=args.transpose,
         strength=args.strength,
         preserve=args.preserve,
         smooth_ms=args.smooth_ms,
@@ -71,7 +74,8 @@ def main(argv=None):
     elif a.residual_drift_ms > 60:
         print("  ! high residual drift -- offset-only sync insufficient; "
               "use --align-mode dtw")
-    print(f"reference notes: {res.n_notes}   register fold: {res.register_offset:+d} st")
+    print(f"reference notes: {res.n_notes}   register fold: {res.register_offset:+d} st"
+          + (f"   transpose: {res.transpose:+d} st" if res.transpose else ""))
     m = res.metrics
     print(f"pitch error to reference melody:")
     print(f"  before:            {m['mean_abs_cents_before']:.0f} cents "
