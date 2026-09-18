@@ -43,6 +43,7 @@ python -m vtuner.cli --reference data/ref.wav --user data/take.wav --out output
 #   --preserve 1.0                     how much of your vibrato/micro-pitch to keep
 #   --smooth-ms 95                     glide corrections across notes (higher = less robotic)
 #   --transpose 0                      shift the output key up/down by N semitones (e.g. -3, +2)
+#   --mix                              produce a cover: tuned vocal on the song's real instrumental
 #   --model full|tiny                  CREPE accuracy vs speed
 #   --measure                          re-track the render to verify tuning
 ```
@@ -67,6 +68,19 @@ real acapella still tracks a little cleaner than a separated one.
 
 ```bash
 python -m vtuner.cli -r data/full_song.mp3 -u data/take.wav --isolate-reference
+```
+
+**Produced cover (`--mix`):** get one finished track — your tuned voice on the
+song's **real instrumental**. One Demucs pass on the full song yields both the
+melody reference (vocal) and the backing (instrumental); your tuned vocal is
+then time-warped onto the song's timeline (pitch-preserved, via the DTW map)
+and mixed with the instrumental, written to `<take>_cover.wav`. Needs a
+full-song reference (so there's an instrumental to recover); implies
+`--isolate-reference`. If your take was recorded over karaoke, add
+`--isolate-take` to strip that first.
+
+```bash
+python -m vtuner.cli -r data/full_song.mp3 -u data/take.wav --mix
 ```
 
 ## Demo UI

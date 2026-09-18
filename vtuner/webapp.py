@@ -74,6 +74,7 @@ def tune():
             smooth_ms=f("smooth_ms", 95.0), transpose=int(f("transpose", 0)),
             isolate_reference=request.form.get("isolate_reference") == "1",
             isolate_take=request.form.get("isolate_take") == "1",
+            mix=request.form.get("mix") == "1",
             measure_output=False,
         )
     except Exception as exc:
@@ -91,6 +92,7 @@ def tune():
 
     return jsonify(
         raw=base("raw"), world=base("world"), rubberband=base("rubberband"),
+        cover=base("cover"), cover_error=res.outputs.get("cover_error"),
         notes=res.n_notes, register=res.register_offset, sync=sync,
         cents_before=round(m["mean_abs_cents_before"]),
         cents_after=round(m["mean_abs_cents_after_predicted"]),
@@ -153,6 +155,9 @@ INDEX_HTML = r"""<!doctype html>
       <label style="display:block;margin-top:8px;font-size:13px;color:#c7ccd6">
         <input type="checkbox" id="isoRef"> It's a full song — isolate the vocal
         <span class="muted">(Demucs; slower, first run downloads a model)</span></label>
+      <label style="display:block;margin-top:6px;font-size:13px;color:#c7ccd6">
+        <input type="checkbox" id="mix"> 🎵 Produce a cover — mix my tuned voice onto the song's real instrumental
+        <span class="muted">(needs a full song here; slower)</span></label>
     </div>
     <div class="col">
       <label class="blk">2 · Your take</label>
@@ -202,6 +207,10 @@ INDEX_HTML = r"""<!doctype html>
       <div class="col"><label class="blk">Before <span class="muted">(your take)</span></label><audio id="aRaw" controls></audio></div>
       <div class="col" id="wCol"><label class="blk">After — WORLD</label><audio id="aWorld" controls></audio></div>
       <div class="col" id="rCol" hidden><label class="blk">After — RubberBand</label><audio id="aRb" controls></audio></div>
+    </div>
+    <div id="coverWrap" hidden style="margin-top:16px">
+      <label class="blk">🎵 Produced cover <span class="muted">(your tuned voice on the song's real instrumental)</span></label>
+      <audio id="aCover" controls></audio>
     </div>
   </div>
 
@@ -265,10 +274,11 @@ async function runTune(useExample){
     if (!ref || !take) { setStatus('⚠️ Provide a reference vocal and your take (upload or record).'); return; }
     fd.append('reference', ref); fd.append('take', take);
     if ($('#isoRef').checked) { fd.append('isolate_reference','1'); isolating = true; }
+    if ($('#mix').checked) { fd.append('mix','1'); isolating = true; }
   }
   const slow = seg.model==='full' && !useExample;
   setStatus('<span class="spin"></span>Tuning…'
-    + (isolating ? ' (isolating the vocal with Demucs — first run downloads a model, can take a few min)'
+    + (isolating ? ' (separating with Demucs — first run downloads a model; can take a few min)'
                  : (slow ? ' (full model on a fresh clip can take 1–2 min on CPU)' : '')));
   $('#tuneBtn').disabled = $('#exBtn').disabled = true;
   try {
@@ -283,6 +293,8 @@ async function runTune(useExample){
     $('#aRaw').src = '/audio/'+d.raw+bust;
     if (d.world){ $('#wCol').hidden=false; $('#aWorld').src='/audio/'+d.world+bust; } else $('#wCol').hidden=true;
     if (d.rubberband){ $('#rCol').hidden=false; $('#aRb').src='/audio/'+d.rubberband+bust; } else $('#rCol').hidden=true;
+    if (d.cover){ $('#coverWrap').hidden=false; $('#aCover').src='/audio/'+d.cover+bust; }
+    else { $('#coverWrap').hidden=true; if (d.cover_error) $('#status').innerHTML += '<br><span class="muted">cover failed: '+d.cover_error+'</span>'; }
   } catch(e){ setStatus('❌ '+e); }
   finally { $('#tuneBtn').disabled = $('#exBtn').disabled = false; }
 }

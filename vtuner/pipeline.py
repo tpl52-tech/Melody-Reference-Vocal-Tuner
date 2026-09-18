@@ -22,6 +22,7 @@ import librosa
 
 from . import audio_io
 from . import isolate as isolatemod
+from . import mix as mixmod
 from . import warp as warpmod
 from .pitch import track_pitch, PitchTrack
 from .align import estimate_offset, Alignment
@@ -74,8 +75,9 @@ def run(
     backend: str = "both",           # 'world' | 'rubberband' | 'both'
     align_mode: str = "dtw",         # 'dtw' (drift-tolerant) | 'offset' (v1)
     isolate_reference: bool = False, # Demucs-isolate the reference from a full mix
-    isolate_take: bool = False,      # Demucs-isolate the take (rarely needed)
+    isolate_take: bool = False,      # Demucs-isolate the take (e.g. strip karaoke)
     transpose: int = 0,              # key shift in semitones (on top of octave-match)
+    mix: bool = False,               # warp tuned vocal onto the song's instrumental
     strength: float = 0.6,      # tuned by ear on the first real take
     preserve: float = 1.0,
     smooth_ms: float = 95.0,
@@ -91,6 +93,13 @@ def run(
     cache_dir = cache_dir or os.path.join(out_dir, ".cache")
     timings = {}
     pitch_params = dict(hop_seconds=hop_seconds, fmin=fmin, fmax=fmax, model=model)
+
+    # Producing a cover needs the song's instrumental (from isolating the
+    # reference) and the frame-by-frame warp map (DTW).
+    original_reference_path = reference_path
+    if mix:
+        isolate_reference = True
+        align_mode = "dtw"
 
     # Phase 4: optionally pull the vocal out of a full mix first.
     if isolate_reference:
@@ -201,6 +210,21 @@ def run(
         metrics["mean_abs_cents_after_world_measured"] = _mean_abs(
             cents_error(wpt.f0[:m], target_f0[:m])
         )
+
+    # Produced cover: warp the tuned vocal onto the song timeline, mix with the
+    # recovered instrumental.
+    if mix:
+        try:
+            t0 = time.time()
+            _v, accomp_path, acc_hit = isolatemod.isolate_stems(original_reference_path, cache_dir)
+            tuned = outputs.get("world") or outputs.get("rubberband")
+            cover_path = os.path.join(out_dir, f"{stem}_cover.wav")
+            mixmod.produce_cover(tuned, accomp_path, warp.take_to_ref, hop_seconds, cover_path)
+            outputs["cover"] = cover_path
+            timings["mix"] = time.time() - t0
+            timings["instrumental_cache_hit"] = acc_hit
+        except Exception as exc:
+            outputs["cover_error"] = str(exc)
 
     return Result(
         alignment=align, align_mode=align_mode, register_offset=reg,
