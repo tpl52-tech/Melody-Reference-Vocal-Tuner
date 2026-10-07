@@ -109,107 +109,185 @@ INDEX_HTML = r"""<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Melody-Reference Vocal Tuner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: light dark; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-         background:#0f1115; color:#e7e9ee; }
-  .wrap { max-width:900px; margin:0 auto; padding:32px 18px 64px; }
-  h1 { font-size:26px; margin:0 0 4px; }
-  .tag { color:#9aa3b2; margin:0 0 28px; }
-  .card { background:#181b22; border:1px solid #262b36; border-radius:14px; padding:18px; margin-bottom:16px; }
-  .row { display:flex; gap:16px; flex-wrap:wrap; }
-  .col { flex:1 1 300px; }
-  label.blk { display:block; font-weight:600; margin-bottom:6px; }
-  input[type=file] { width:100%; }
-  button { font:inherit; border:0; border-radius:10px; padding:11px 18px; cursor:pointer; }
-  .primary { background:#6c8cff; color:#0b0d12; font-weight:700; }
-  .ghost { background:#242a36; color:#e7e9ee; }
-  .rec { background:#e5484d; color:#fff; }
-  .rec.on { background:#8b1a1d; }
-  details summary { cursor:pointer; font-weight:600; color:#c7ccd6; }
-  .set { margin-top:14px; }
-  .set .item { margin:12px 0; }
-  .set .item small { color:#9aa3b2; }
-  input[type=range] { width:100%; }
-  .seg { display:inline-flex; gap:6px; }
-  .seg button { background:#242a36; color:#c7ccd6; padding:6px 12px; border-radius:8px; }
-  .seg button.sel { background:#6c8cff; color:#0b0d12; font-weight:700; }
-  #status { margin:16px 0; min-height:22px; color:#c7ccd6; }
-  .metric { background:#12331f; border:1px solid #1e5233; color:#c8f0d6; padding:12px 14px; border-radius:10px; }
-  .players .col { min-width:250px; }
-  audio { width:100%; margin-top:6px; }
-  .muted { color:#9aa3b2; font-size:13px; }
-  .spin { display:inline-block; width:14px; height:14px; border:2px solid #6c8cff; border-top-color:transparent;
-          border-radius:50%; animation:s .8s linear infinite; vertical-align:-2px; margin-right:8px; }
-  @keyframes s { to { transform:rotate(360deg); } }
+  :root{
+    --bg:#e7e1d2; --card:#f1ecdd; --ink:#3b3529; --olive:#6b6151; --sub:#938a76;
+    --line:#d7cfbc; --sage:#aec3a6;
+    --amber:#d7a44f; --red:#c0795a; --lime:#aec3a6; --green:#7f9a6a; --yellow:#e2cd84;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink);
+       font-family:"Space Grotesk",-apple-system,system-ui,sans-serif; font-size:15px; line-height:1.5;
+       -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:860px; margin:0 auto; padding:40px 20px 90px;}
+
+  .kicker{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:22px;}
+  .tag-pill{font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+            background:var(--ink); color:var(--card); padding:8px 15px; border-radius:100px;}
+
+  .hero{display:flex; justify-content:space-between; align-items:center; gap:26px; flex-wrap:wrap; margin-bottom:34px;}
+  .hero-text{flex:1 1 320px;}
+  h1.display{font-size:clamp(42px,8vw,78px); font-weight:700; letter-spacing:-.03em;
+             line-height:.93; margin:4px 0 16px;}
+  .lede{font-size:17px; color:var(--sub); max-width:460px; margin:0; font-weight:500;}
+  .lede b{color:var(--ink); font-weight:700;}
+
+  /* spinning vinyl motif */
+  .vinyl{width:132px; height:132px; flex:none; background:var(--sage); border:2px solid var(--olive);
+         border-radius:20px; box-shadow:7px 7px 0 0 var(--olive); display:grid; place-items:center;}
+  .vinyl span{width:94px; height:94px; border-radius:50%; animation:spin 4s linear infinite;
+     background:radial-gradient(circle,#f1ecdd 0 14%,var(--olive) 15% 29%,#f1ecdd 30% 35%,
+       var(--olive) 36% 61%,#f1ecdd 62% 65%,var(--olive) 66%);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .card{background:var(--card); border:2px solid var(--olive); border-radius:22px;
+        padding:24px; margin-bottom:22px; box-shadow:6px 6px 0 0 var(--olive);}
+  .row{display:flex; gap:18px; flex-wrap:wrap;}
+  .col{flex:1 1 300px; min-width:250px;}
+  .badge{width:34px; height:34px; border-radius:50%; display:inline-grid; place-items:center;
+         font-weight:700; margin-right:11px; border:2px solid var(--olive); color:var(--ink);}
+  .lbl{font-weight:700; font-size:16px; letter-spacing:-.01em; margin:0 0 13px; display:flex; align-items:center;}
+  .sub{color:var(--sub); font-weight:500; font-size:13px;}
+
+  input[type=file]{width:100%; font:inherit; font-size:13px; color:var(--sub);}
+  input[type=file]::file-selector-button{font:inherit; font-weight:700; font-size:13px; border:2px solid var(--olive);
+     cursor:pointer; background:var(--sage); color:var(--ink); padding:8px 14px; border-radius:100px; margin-right:12px;}
+
+  .toggle{display:flex; align-items:center; gap:11px; margin-top:13px; font-size:13.5px; cursor:pointer; font-weight:600;}
+  .toggle input{appearance:none; -webkit-appearance:none; width:44px; height:25px; background:var(--card);
+     border:2px solid var(--olive); border-radius:100px; position:relative; cursor:pointer; transition:.15s; flex:none;}
+  .toggle input:checked{background:var(--sage);}
+  .toggle input::after{content:""; position:absolute; top:2px; left:2px; width:17px; height:17px;
+     background:var(--olive); border-radius:50%; transition:.15s;}
+  .toggle input:checked::after{left:21px;}
+
+  .rec{width:56px; height:56px; border-radius:50%; border:2px solid var(--olive); cursor:pointer;
+       background:var(--red); color:var(--card); font-size:16px; display:inline-grid; place-items:center;
+       box-shadow:4px 4px 0 0 var(--olive); transition:.1s; flex:none;}
+  .rec.on{background:var(--ink);}
+  .rec:active{transform:translate(2px,2px); box-shadow:2px 2px 0 0 var(--olive);}
+
+  details.set > summary{cursor:pointer; font-weight:700; list-style:none; padding:2px 0; font-size:15px;}
+  details.set > summary::-webkit-details-marker{display:none;}
+  details.set > summary::before{content:"＋ "; color:var(--sub);}
+  details.set[open] > summary::before{content:"－ ";}
+  .item{margin:18px 0;}
+  .item .cap{font-weight:600; font-size:13.5px; margin-bottom:9px; display:flex; justify-content:space-between;
+     align-items:baseline; gap:8px;}
+  .item .cap small{color:var(--sub); font-weight:500; margin-left:auto; margin-right:10px;}
+  .val{font-variant-numeric:tabular-nums; background:var(--ink); color:var(--card); padding:3px 11px;
+     border-radius:100px; font-size:12px; font-weight:600;}
+
+  .seg{display:inline-flex; gap:5px; flex-wrap:wrap; background:var(--line); padding:4px; border-radius:100px;
+     border:2px solid var(--olive);}
+  .seg button{font:inherit; font-weight:600; font-size:12.5px; border:0; cursor:pointer; background:transparent;
+     color:var(--sub); padding:8px 15px; border-radius:100px; transition:.1s;}
+  .seg button.sel{background:var(--sage); color:var(--ink);}
+
+  input[type=range]{width:100%; accent-color:var(--olive); height:4px;}
+
+  .actions{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:26px 0 8px;}
+  button.primary{font:inherit; font-weight:700; font-size:17px; border:2px solid var(--olive); cursor:pointer;
+     background:var(--ink); color:var(--card); padding:15px 32px; border-radius:100px; box-shadow:5px 5px 0 0 var(--olive); transition:.1s;}
+  button.primary:active{transform:translate(3px,3px); box-shadow:2px 2px 0 0 var(--olive);}
+  button.primary:disabled{opacity:.5; cursor:default; transform:none; box-shadow:5px 5px 0 0 var(--olive);}
+  button.ghost{font:inherit; font-weight:700; font-size:15px; border:2px solid var(--olive); cursor:pointer;
+     background:var(--card); color:var(--ink); padding:14px 24px; border-radius:100px; box-shadow:4px 4px 0 0 var(--olive); transition:.1s;}
+  button.ghost:active{transform:translate(2px,2px); box-shadow:2px 2px 0 0 var(--olive);}
+  button.ghost:disabled{opacity:.5;}
+
+  #status{margin:22px 0; min-height:20px; color:var(--sub); font-weight:500;}
+  .metric{background:#e4ecda; border:2px solid var(--green); color:#3f5533; padding:17px 19px;
+     border-radius:18px; font-weight:500; line-height:1.7; box-shadow:5px 5px 0 0 var(--green);}
+  .metric b{color:var(--ink); font-weight:700;}
+  .muted{color:var(--sub);}
+
+  .note{width:38px; height:38px; border-radius:50%; display:inline-grid; place-items:center;
+     font-weight:700; margin-right:11px; font-size:15px; border:2px solid var(--olive); color:var(--ink);}
+  audio{width:100%; margin-top:10px;}
+
+  /* mini spinning vinyl as the loader */
+  .spin{display:inline-block; width:18px; height:18px; border-radius:50%; vertical-align:-3px; margin-right:9px;
+     background:radial-gradient(circle,#f1ecdd 0 20%,var(--ink) 21% 42%,#f1ecdd 43% 50%,var(--ink) 51%);
+     animation:spin .9s linear infinite;}
+  @media(max-width:560px){ h1.display{font-size:50px;} .vinyl{width:108px;height:108px;} .vinyl span{width:76px;height:76px;} }
 </style></head>
 <body><div class="wrap">
-  <h1>🎤 Melody-Reference Vocal Tuner</h1>
-  <p class="tag">Sing along to a song and get retuned to follow its <b>actual melody</b> — not a generic scale. No key or scale to pick.</p>
-
-  <div class="card"><div class="row">
-    <div class="col">
-      <label class="blk">1 · Reference vocal <span class="muted">(isolated)</span></label>
-      <input type="file" id="reference" accept="audio/*">
-      <label style="display:block;margin-top:8px;font-size:13px;color:#c7ccd6">
-        <input type="checkbox" id="isoRef"> It's a full song — isolate the vocal
-        <span class="muted">(Demucs; slower, first run downloads a model)</span></label>
-      <label style="display:block;margin-top:6px;font-size:13px;color:#c7ccd6">
-        <input type="checkbox" id="mix"> 🎵 Produce a cover — mix my tuned voice onto the song's real instrumental
-        <span class="muted">(needs a full song here; slower)</span></label>
+  <div class="kicker">
+    <span class="tag-pill">Melody-Reference Vocal Tuner</span>
+  </div>
+  <div class="hero">
+    <div class="hero-text">
+      <h1 class="display">Follow the<br>melody.</h1>
+      <p class="lede">Sing along to a song and get retuned to its <b>actual melody</b> — not a generic scale. No key to pick, no notes to edit.</p>
     </div>
-    <div class="col">
-      <label class="blk">2 · Your take</label>
-      <input type="file" id="take" accept="audio/*">
-      <div style="margin-top:8px">
-        <button class="rec" id="recBtn" type="button">● Record</button>
-        <span class="muted" id="recInfo">or upload above</span>
+    <div class="vinyl" aria-hidden="true"><span></span></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <div class="lbl"><span class="badge" style="background:var(--amber)">1</span> Reference vocal</div>
+        <input type="file" id="reference" accept="audio/*">
+        <label class="toggle"><input type="checkbox" id="isoRef"> <span>It's a full song — isolate the vocal <span class="sub">· Demucs</span></span></label>
+        <label class="toggle"><input type="checkbox" id="mix"> <span>Produce a cover on the real instrumental <span class="sub">· full song</span></span></label>
+      </div>
+      <div class="col">
+        <div class="lbl"><span class="badge" style="background:var(--lime)">2</span> Your take</div>
+        <input type="file" id="take" accept="audio/*">
+        <div style="margin-top:14px; display:flex; align-items:center; gap:14px;">
+          <button class="rec" id="recBtn" type="button" title="Record">●</button>
+          <span class="sub" id="recInfo">record, or upload above</span>
+        </div>
         <audio id="recPlay" controls hidden></audio>
       </div>
     </div>
+
+    <details class="set" style="margin-top:20px; border-top:1px solid var(--line); padding-top:14px;">
+      <summary>Settings <span class="sub">— tuned for a natural sound</span></summary>
+      <div class="item"><div class="cap">Alignment</div>
+        <span class="seg" data-name="align_mode">
+          <button data-v="dtw" class="sel">DTW · tolerates drift</button>
+          <button data-v="offset">Offset</button></span></div>
+      <div class="item"><div class="cap">Pitch-shifter</div>
+        <span class="seg" data-name="backend">
+          <button data-v="world" class="sel">WORLD</button>
+          <button data-v="rubberband">RubberBand</button>
+          <button data-v="both">Both</button></span></div>
+      <div class="item"><div class="cap">CREPE model</div>
+        <span class="seg" data-name="model">
+          <button data-v="full" class="sel">Full · best</button>
+          <button data-v="tiny">Tiny · fast</button></span></div>
+      <div class="item"><div class="cap">Correction strength <small>lower = more natural</small> <span class="val" id="sV">0.60</span></div>
+        <input type="range" id="strength" min="0" max="1" step="0.05" value="0.6"></div>
+      <div class="item"><div class="cap">Keep vibrato <span class="val" id="pV">1.00</span></div>
+        <input type="range" id="preserve" min="0" max="1" step="0.05" value="1.0"></div>
+      <div class="item"><div class="cap">Glide across notes <small>higher = less robotic</small> <span class="val" id="mV">95</span></div>
+        <input type="range" id="smooth_ms" min="0" max="200" step="5" value="95"></div>
+      <div class="item"><div class="cap">Transpose · key shift <span class="val" id="tV">0</span></div>
+        <input type="range" id="transpose" min="-12" max="12" step="1" value="0"></div>
+    </details>
   </div>
 
-  <details class="set"><summary>Settings <span class="muted">(defaults tuned for a natural sound)</span></summary>
-    <div class="item"><label class="blk">Alignment</label>
-      <span class="seg" data-name="align_mode">
-        <button data-v="dtw" class="sel">DTW (tolerates drift)</button>
-        <button data-v="offset">Offset</button></span></div>
-    <div class="item"><label class="blk">Pitch-shifter</label>
-      <span class="seg" data-name="backend">
-        <button data-v="world" class="sel">WORLD</button>
-        <button data-v="rubberband">RubberBand</button>
-        <button data-v="both">Both</button></span></div>
-    <div class="item"><label class="blk">CREPE model</label>
-      <span class="seg" data-name="model">
-        <button data-v="full" class="sel">Full (best)</button>
-        <button data-v="tiny">Tiny (fast)</button></span></div>
-    <div class="item"><label class="blk">Correction strength: <span id="sV">0.60</span> <small>(lower = more natural)</small></label>
-      <input type="range" id="strength" min="0" max="1" step="0.05" value="0.6"></div>
-    <div class="item"><label class="blk">Keep vibrato: <span id="pV">1.00</span></label>
-      <input type="range" id="preserve" min="0" max="1" step="0.05" value="1.0"></div>
-    <div class="item"><label class="blk">Glide across notes: <span id="mV">95</span> ms <small>(higher = less robotic)</small></label>
-      <input type="range" id="smooth_ms" min="0" max="200" step="5" value="95"></div>
-    <div class="item"><label class="blk">Transpose (key shift): <span id="tV">0</span> semitones <small>(shift the whole melody up/down)</small></label>
-      <input type="range" id="transpose" min="-12" max="12" step="1" value="0"></div>
-  </details>
-  </div>
-
-  <div style="display:flex; gap:12px; flex-wrap:wrap">
-    <button class="primary" id="tuneBtn">Tune 🎚️</button>
-    <button class="ghost" id="exBtn">Load NSYNC example &amp; tune</button>
+  <div class="actions">
+    <button class="primary" id="tuneBtn">Tune ↗</button>
+    <button class="ghost" id="exBtn">Load NSYNC example</button>
   </div>
 
   <div id="status"></div>
 
   <div class="card players" id="results" hidden>
     <div class="row">
-      <div class="col"><label class="blk">Before <span class="muted">(your take)</span></label><audio id="aRaw" controls></audio></div>
-      <div class="col" id="wCol"><label class="blk">After — WORLD</label><audio id="aWorld" controls></audio></div>
-      <div class="col" id="rCol" hidden><label class="blk">After — RubberBand</label><audio id="aRb" controls></audio></div>
+      <div class="col"><div class="lbl"><span class="note" style="background:var(--line)">R</span>Before</div><audio id="aRaw" controls></audio></div>
+      <div class="col" id="wCol"><div class="lbl"><span class="note" style="background:var(--green)">W</span>After · WORLD</div><audio id="aWorld" controls></audio></div>
+      <div class="col" id="rCol" hidden><div class="lbl"><span class="note" style="background:var(--amber)">R</span>After · RubberBand</div><audio id="aRb" controls></audio></div>
     </div>
-    <div id="coverWrap" hidden style="margin-top:16px">
-      <label class="blk">🎵 Produced cover <span class="muted">(your tuned voice on the song's real instrumental)</span></label>
+    <div id="coverWrap" hidden style="margin-top:20px">
+      <div class="lbl"><span class="note" style="background:var(--red)">♪</span>Produced cover <span class="sub" style="margin-left:8px">your voice on the real instrumental</span></div>
       <audio id="aCover" controls></audio>
     </div>
   </div>
@@ -248,9 +326,9 @@ $('#recBtn').onclick = async () => {
       $('#recPlay').src=url; $('#recPlay').hidden=false;
       $('#recInfo').textContent='recorded ✓ (will be used as your take)';
       stream.getTracks().forEach(t=>t.stop());
-      btn.classList.remove('on'); btn.textContent='● Record';
+      btn.classList.remove('on'); btn.textContent='●';
     };
-    mediaRec.start(); btn.classList.add('on'); btn.textContent='■ Stop';
+    mediaRec.start(); btn.classList.add('on'); btn.textContent='■';
     $('#recInfo').textContent='recording…';
   } catch(e){ $('#recInfo').textContent='mic blocked — upload instead'; }
 };
