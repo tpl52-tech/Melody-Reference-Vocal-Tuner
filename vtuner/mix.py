@@ -40,7 +40,7 @@ def warp_to_reference(vocal_y, sr, take_to_ref, hop_seconds, n_ref_samples):
 
 
 def produce_cover(vocal_path, instrumental_path, take_to_ref, hop_seconds,
-                  out_path, vocal_gain=1.0, inst_gain=0.6):
+                  out_path, vocal_gain=1.0, inst_gain=0.7):
     """Warp the tuned vocal onto the song timeline and mix with the
     instrumental. Returns out_path."""
     voc, sr = audio_io.load_audio(vocal_path, sr=None, mono=True)
@@ -53,7 +53,15 @@ def produce_cover(vocal_path, instrumental_path, take_to_ref, hop_seconds,
     warped = _fit(np.asarray(warped, dtype=float), n_ref)
     inst = _fit(inst.astype(float), n_ref)
 
-    mix = vocal_gain * warped + inst_gain * inst
+    # Balance the backing to the vocal by RMS so it's audible in any section
+    # (a soft intro vs a full chorus differ hugely in level); inst_gain is the
+    # backing-to-vocal loudness ratio.
+    vrms = float(np.sqrt(np.mean(warped ** 2) + 1e-12))
+    irms = float(np.sqrt(np.mean(inst ** 2) + 1e-12))
+    if irms > 0:
+        inst = inst * (inst_gain * vrms / irms)
+
+    mix = vocal_gain * warped + inst
     peak = float(np.max(np.abs(mix))) if mix.size else 0.0
     if peak > 1.0:
         mix = mix / peak

@@ -78,6 +78,7 @@ def run(
     isolate_take: bool = False,      # Demucs-isolate the take (e.g. strip karaoke)
     transpose: int = 0,              # key shift in semitones (on top of octave-match)
     mix: bool = False,               # warp tuned vocal onto the song's instrumental
+    isolate_model: str = "htdemucs", # Demucs model for separation (htdemucs_ft = cleaner, slower)
     strength: float = 0.6,      # tuned by ear on the first real take
     preserve: float = 1.0,
     smooth_ms: float = 95.0,
@@ -104,12 +105,12 @@ def run(
     # Phase 4: optionally pull the vocal out of a full mix first.
     if isolate_reference:
         t0 = time.time()
-        reference_path, hit = isolatemod.isolate_vocal(reference_path, cache_dir)
+        reference_path, hit = isolatemod.isolate_vocal(reference_path, cache_dir, model=isolate_model)
         timings["isolate_reference"] = time.time() - t0
         timings["isolate_reference_cache_hit"] = hit
     if isolate_take:
         t0 = time.time()
-        user_path, hit = isolatemod.isolate_vocal(user_path, cache_dir)
+        user_path, hit = isolatemod.isolate_vocal(user_path, cache_dir, model=isolate_model)
         timings["isolate_take"] = time.time() - t0
         timings["isolate_take_cache_hit"] = hit
 
@@ -216,7 +217,7 @@ def run(
     if mix:
         try:
             t0 = time.time()
-            _v, accomp_path, acc_hit = isolatemod.isolate_stems(original_reference_path, cache_dir)
+            _v, accomp_path, acc_hit = isolatemod.isolate_stems(original_reference_path, cache_dir, model=isolate_model)
             tuned = outputs.get("world") or outputs.get("rubberband")
             cover_path = os.path.join(out_dir, f"{stem}_cover.wav")
             mixmod.produce_cover(tuned, accomp_path, warp.take_to_ref, hop_seconds, cover_path)

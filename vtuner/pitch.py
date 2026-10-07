@@ -13,7 +13,7 @@ import torch
 import torchcrepe
 import librosa
 
-from .util import hz_to_midi, nan_median_filter
+from .util import hz_to_midi, midi_to_hz, nan_median_filter
 
 CREPE_SR = 16000  # torchcrepe operates at 16 kHz
 
@@ -80,12 +80,35 @@ def track_pitch(
     voiced = (per >= periodicity_thr) & (loud_db >= silence_db)
     f0[~voiced] = np.nan
     f0 = nan_median_filter(f0, median_win)
+    f0 = _octave_correct(f0, hop / CREPE_SR)
     voiced = np.isfinite(f0)
 
     return PitchTrack(
         f0=f0, voiced=voiced, periodicity=per, times=times,
         hop_seconds=hop / CREPE_SR,
     )
+
+
+def _octave_correct(f0: np.ndarray, hop_seconds: float, win_s: float = 0.6) -> np.ndarray:
+    """Snap steady octave errors back to the melody's octave.
+
+    CREPE can lock onto the wrong octave for a whole (low/breathy) note. We fold
+    each frame by whole octaves to sit closest to a robust local center: a
+    long-window median (catches sustained octave-off notes) blended toward the
+    global median (anchors it when a whole region is off)."""
+    midi = hz_to_midi(f0)
+    v = np.isfinite(midi)
+    if v.sum() < 3:
+        return f0
+    win = max(3, int(round(win_s / hop_seconds)) | 1)
+    local = nan_median_filter(midi, win)
+    glob = float(np.median(midi[v]))
+    center = np.where(np.isfinite(local), local, glob)
+    center = 0.5 * center + 0.5 * glob        # anchor local toward global
+    out = midi.copy()
+    k = np.round((midi[v] - center[v]) / 12.0)
+    out[v] = midi[v] - 12.0 * k
+    return midi_to_hz(out)
 
 
 def _match_len(x: np.ndarray, n: int) -> np.ndarray:
