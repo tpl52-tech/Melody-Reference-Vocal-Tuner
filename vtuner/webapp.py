@@ -101,14 +101,14 @@ def tune():
 
 def main(host="127.0.0.1", port=7860):
     os.makedirs(OUT_DIR, exist_ok=True)
-    print(f"\n  Melody-Reference Vocal Tuner — open  http://{host}:{port}\n")
+    print(f"\n  Mockingbird — open  http://{host}:{port}\n")
     app.run(host=host, port=port, debug=False, threaded=True)
 
 
 INDEX_HTML = r"""<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Melody-Reference Vocal Tuner</title>
+<title>Mockingbird</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -218,12 +218,12 @@ INDEX_HTML = r"""<!doctype html>
 </style></head>
 <body><div class="wrap">
   <div class="kicker">
-    <span class="tag-pill">Melody-Reference Vocal Tuner</span>
+    <span class="tag-pill">🪶 Mockingbird</span>
   </div>
   <div class="hero">
     <div class="hero-text">
       <h1 class="display">Follow the<br>melody.</h1>
-      <p class="lede">Sing along to a song and get retuned to its <b>actual melody</b> — not a generic scale. No key to pick, no notes to edit.</p>
+      <p class="lede">Named for the bird that learns any song — sing along, and Mockingbird retunes you to the reference's <b>actual melody</b>. No key to pick, no notes to edit.</p>
     </div>
     <div class="vinyl" aria-hidden="true"><span></span></div>
   </div>

@@ -1,6 +1,6 @@
-# Melody-Reference Vocal Tuner
+# 🪶 Mockingbird
 
-Retune an amateur **sing-along take** so it follows a **reference vocal's actual melody** — no key or scale selection, no note-by-note editing. Unlike consumer auto-tune (Voloco, BandLab AutoPitch), which snaps to a generic scale and sounds wrong on anything chromatic, this reads the melody straight from a reference vocal.
+**Follow the melody.** Named for the bird that learns any song, Mockingbird retunes an amateur **sing-along take** so it follows a **reference vocal's actual melody** — no key or scale selection, no note-by-note editing. Unlike consumer auto-tune (Voloco, BandLab AutoPitch), which snaps to a generic scale and sounds wrong on anything chromatic, this reads the melody straight from a reference vocal.
 
 Point it at a reference vocal clip and your own take (recorded while singing along, so the two are already roughly time-synced) and it renders an in-tune version that keeps your own voice and expression.
 
