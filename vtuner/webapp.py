@@ -137,11 +137,13 @@ INDEX_HTML = r"""<!doctype html>
   .lede b{color:var(--ink); font-weight:700;}
 
   /* spinning vinyl motif */
-  .vinyl{width:132px; height:132px; flex:none; background:var(--sage); border:2px solid var(--olive);
-         border-radius:20px; box-shadow:7px 7px 0 0 var(--olive); display:grid; place-items:center;}
-  .vinyl span{width:94px; height:94px; border-radius:50%; animation:spin 4s linear infinite;
-     background:radial-gradient(circle,#f1ecdd 0 14%,var(--olive) 15% 29%,#f1ecdd 30% 35%,
-       var(--olive) 36% 61%,#f1ecdd 62% 65%,var(--olive) 66%);}
+  .vinyl{position:relative; width:132px; height:132px; flex:none; background:var(--sage); border:2px solid var(--olive);
+         border-radius:20px; box-shadow:7px 7px 0 0 var(--olive); display:grid; place-items:center; overflow:hidden;}
+  .vinyl svg{width:108px; height:108px;}
+  .vinyl .n{position:absolute; font-size:17px; color:var(--olive); font-weight:700;}
+  .vinyl .n1{top:12px; right:14px; animation:fly 2.8s ease-in-out infinite;}
+  .vinyl .n2{top:22px; right:30px; animation:fly 2.8s ease-in-out infinite 1.1s;}
+  @keyframes fly{0%{transform:translateY(6px);opacity:0} 25%{opacity:1} 100%{transform:translateY(-16px);opacity:0}}
   @keyframes spin{to{transform:rotate(360deg);}}
 
   .card{background:var(--card); border:2px solid var(--olive); border-radius:22px;
@@ -214,7 +216,7 @@ INDEX_HTML = r"""<!doctype html>
   .spin{display:inline-block; width:18px; height:18px; border-radius:50%; vertical-align:-3px; margin-right:9px;
      background:radial-gradient(circle,#f1ecdd 0 20%,var(--ink) 21% 42%,#f1ecdd 43% 50%,var(--ink) 51%);
      animation:spin .9s linear infinite;}
-  @media(max-width:560px){ h1.display{font-size:50px;} .vinyl{width:108px;height:108px;} .vinyl span{width:76px;height:76px;} }
+  @media(max-width:560px){ h1.display{font-size:50px;} .vinyl{width:108px;height:108px;} .vinyl svg{width:86px;height:86px;} }
 </style></head>
 <body><div class="wrap">
   <div class="kicker">
@@ -225,7 +227,23 @@ INDEX_HTML = r"""<!doctype html>
       <h1 class="display">Follow the<br>melody.</h1>
       <p class="lede">Named for the bird that learns any song — sing along, and Mockingbird retunes you to the reference's <b>actual melody</b>. No key to pick, no notes to edit.</p>
     </div>
-    <div class="vinyl" aria-hidden="true"><span></span></div>
+    <div class="vinyl" aria-hidden="true">
+      <span class="n n1">♪</span><span class="n n2">♫</span>
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="16" y="83" width="66" height="7" rx="3.5" fill="#4a4336"/>
+        <path d="M51 71 L49 83 M58 71 L60 83" stroke="#3b3529" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M43 55 Q22 60 8 73 Q20 70 31 66 L45 62 Z" fill="#6b6151"/>
+        <path d="M9 72 Q20 69 31 66" stroke="#e9e0cd" stroke-width="2" stroke-linecap="round"/>
+        <ellipse cx="52" cy="53" rx="19" ry="14.5" fill="#6b6151"/>
+        <path d="M40 58 Q50 68 65 61 Q60 53 50 53 Q43 54 40 58 Z" fill="#e4dac4"/>
+        <circle cx="66" cy="43" r="10.5" fill="#6b6151"/>
+        <path d="M46 45 Q60 47 62 59 Q51 61 43 54 Q41 48 46 45 Z" fill="#4a4336"/>
+        <path d="M47 53 L59 57" stroke="#e9e0cd" stroke-width="3" stroke-linecap="round"/>
+        <path d="M75 41 L89 43 L75 46 Z" fill="#3b3529"/>
+        <circle cx="69" cy="41" r="2.6" fill="#3b3529"/>
+        <circle cx="68" cy="40" r="0.9" fill="#f1ecdd"/>
+      </svg>
+    </div>
   </div>
 
   <div class="card">
